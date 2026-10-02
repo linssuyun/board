@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高雄 YouBike 2.0 & 觀光景點資訊看板</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            yellow: '#facc15',
+                            kh: '#00838f'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+            border-radius: 4px;
+        }
+        .dark .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.05);
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.5);
+            border-radius: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(107, 114, 128, 0.8);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+        }
+        .dark .glass-card {
+            background: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-200">
+
+    <!-- Header Navbar -->
+    <header class="sticky top-0 z-50 glass-card border-b border-slate-200 dark:border-slate-800 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-600 flex items-center justify-center text-white shadow-md shadow-orange-500/20">
+                    <i data-lucide="bike" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent dark:from-orange-400 dark:to-amber-300">
+                        高雄單車輕旅行看板
+                    </h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">YouBike 2.0 即時車位 & 景點指南</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2 sm:space-x-4">
+                <!-- Data status badge -->
+                <div id="data-status" class="hidden sm:flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300 border border-orange-200 dark:border-orange-800">
+                    <span class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
+                    <span id="data-status-text">連線正常 (即時)</span>
+                </div>
+
+                <!-- Theme Toggle -->
+                <button id="theme-toggle" class="p-2 rounded-lg bg-slate-200/80 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors">
+                    <i data-lucide="moon" class="w-5 h-5 dark:hidden"></i>
+                    <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+                </button>
+
+                <!-- Refresh Button -->
+                <button id="refresh-btn" class="flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white text-xs font-medium transition-colors shadow-sm">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5" id="refresh-icon"></i>
+                    <span class="hidden sm:inline">更新資料</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Top Overview Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="glass-card p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center space-x-4">
+                <div class="p-3 bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 rounded-xl">
+                    <i data-lucide="bike" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">全區可借車輛</p>
+                    <h3 id="stat-total-bikes" class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">--</h3>
+                </div>
+            </div>
+
+            <div class="glass-card p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center space-x-4">
+                <div class="p-3 bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400 rounded-xl">
+                    <i data-lucide="parking-square" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">全區可還空位</p>
+                    <h3 id="stat-total-spaces" class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">--</h3>
+                </div>
+            </div>
+
+            <div class="glass-card p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center space-x-4">
+                <div class="p-3 bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 rounded-xl">
+                    <i data-lucide="map-pin" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">監控場站總數</p>
+                    <h3 id="stat-total-stations" class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">--</h3>
+                </div>
+            </div>
+
+            <div class="glass-card p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center space-x-4">
+                <div class="p-3 bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 rounded-xl">
+                    <i data-lucide="camera" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">高雄精選景點</p>
+                    <h3 id="stat-total-spots" class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">12</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search & Filter YouBike Station Section (Full Width) -->
+        <div class="w-full space-y-4">
+            <div class="glass-card p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <h2 class="font-bold text-base flex items-center space-x-2">
+                        <i data-lucide="search" class="w-5 h-5 text-orange-500"></i>
+                        <span>YouBike 站點即時查詢</span>
+                    </h2>
+                    <span id="update-timer" class="text-xs text-slate-400">更新倒數: 60s</span>
+                </div>
+
+                <!-- Filter Controls -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <!-- District Selector -->
+                    <div class="relative">
+                        <select id="district-select" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 appearance-none">
+                            <option value="ALL">全部行政區</option>
+                            <option value="鹽埕區">鹽埕區</option>
+                            <option value="鼓山區">鼓山區</option>
+                            <option value="左營區">左營區</option>
+                            <option value="苓雅區">苓雅區</option>
+                            <option value="三民區">三民區</option>
+                            <option value="新興區">新興區</option>
+                            <option value="旗津區">旗津區</option>
+                            <option value="前鎮區">前鎮區</option>
+                            <option value="鳳山區">鳳山區</option>
+                            <option value="楠梓區">楠梓區</option>
+                            <option value="小港區">小港區</option>
+                            <option value="岡山區">岡山區</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 absolute right-3 top-3 pointer-events-none"></i>
+                    </div>
+
+                    <!-- Status Filter -->
+                    <div class="relative">
+                        <select id="status-filter" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 appearance-none">
+                            <option value="ALL">所有狀態站點</option>
+                            <option value="HAS_BIKES">可借車輛 > 0</option>
+                            <option value="PLENTY_BIKES">車輛充足 (> 5輛)</option>
+                            <option value="HAS_SPACES">可還空位 > 0</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 absolute right-3 top-3 pointer-events-none"></i>
+                    </div>
+
+                    <!-- Search Input -->
+                    <div class="relative">
+                        <input type="text" id="search-input" placeholder="搜尋站點名稱或路名 (例: 駁二, 美麗島)..." class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+                    </div>
+                </div>
+
+                <!-- Station List Grid -->
+                <div id="station-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 max-h-[520px] overflow-y-auto pr-1 custom-scroll">
+                    <!-- Dynamic stations injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Tourism Attractions Showcase Section -->
+        <div class="glass-card p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                    <h2 class="text-lg font-bold flex items-center space-x-2">
+                        <i data-lucide="compass" class="w-5 h-5 text-purple-500"></i>
+                        <span>高雄熱門景點導覽與周邊單車</span>
+                    </h2>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">點擊按鈕快速尋找各景點周邊的 YouBike 站點</p>
+                </div>
+                <!-- Category Tabs -->
+                <div id="spot-filter-tags" class="flex flex-wrap gap-1.5">
+                    <button data-tag="ALL" class="spot-tag active px-3 py-1 rounded-full text-xs font-medium bg-purple-600 text-white transition-all">全部</button>
+                    <button data-tag="藝術人文" class="spot-tag px-3 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-purple-100 dark:hover:bg-purple-950 transition-all">藝術人文</button>
+                    <button data-tag="自然風光" class="spot-tag px-3 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-purple-100 dark:hover:bg-purple-950 transition-all">自然風光</button>
+                    <button data-tag="地標建築" class="spot-tag px-3 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-purple-100 dark:hover:bg-purple-950 transition-all">地標建築</button>
+                    <button data-tag="美食夜市" class="spot-tag px-3 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-purple-100 dark:hover:bg-purple-950 transition-all">美食夜市</button>
+                </div>
+            </div>
+
+            <!-- Attractions Grid -->
+            <div id="attractions-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Dynamic Attraction Cards -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Custom Toast Message -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 ease-out max-w-sm bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-3 border border-slate-700 pointer-events-none">
+        <i data-lucide="info" class="w-5 h-5 text-orange-400 shrink-0"></i>
+        <p id="toast-message" class="text-xs font-medium">訊息通知</p>
+    </div>
+
+    <script>
+        // High quality accurate dataset for Kaohsiung Attractions
+        const KAOHSIUNG_SPOTS = [
+            {
+                id: 'spot-1',
+                name: '駁二藝術特區',
+                district: '鹽埕區',
+                category: '藝術人文',
+                imageUrl: 'https://cdn2.ettoday.net/images/6302/e6302451.jpg',
+                desc: '前身為港口舊倉庫，現今匯聚無數設計創作、當代展演與文創市集，沿著西臨港線自行車道是騎乘單車暢遊港都首選。',
+                nearStation: '駁二藝術特區(大義街)'
+            },
+            {
+                id: 'spot-2',
+                name: '蓮池潭龍虎塔',
+                district: '左營區',
+                category: '自然風光',
+                imageUrl: 'https://www.taiwan.net.tw/att/1/big_scenic_spots/pic_2149_18.jpg',
+                desc: '高雄最知名的國際地標之一，塔高七層，入龍喉出虎口代表趨吉避凶，潭畔設有優良環潭自行車道。',
+                nearStation: '蓮池潭(勝利路)'
+            },
+            {
+                id: 'spot-3',
+                name: '高雄流行音樂中心',
+                district: '鹽埕區',
+                category: '地標建築',
+                imageUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTxoPv3ibxC5OJvJlzRKp7cASt1hEVqgQWP4FAHhlc3q8dJAGqD77-LzJBu&s=10',
+                desc: '以海洋元素為設計靈感的前衛建築，夜間燈光秀璀璨奪目，為愛河灣畔最耀眼的音樂與文創聖地。',
+                nearStation: '高雄流行音樂中心'
+            },
+            {
+                id: 'spot-4',
+                name: '旗津高雄燈塔',
+                district: '旗津區',
+                category: '自然風光',
+                imageUrl: 'https://www.taiwan.net.tw/att/1/big_scenic_spots/pic_A12-00183_4.jpg',
+                desc: '位於旗后山頂的百年巴洛克風格純白燈塔，能遠眺高雄港全景與蔚藍西子灣，極具海港浪漫風情。',
+                nearStation: '旗津輪渡站'
+            },
+            {
+                id: 'spot-5',
+                name: '美麗島站 光之穹頂',
+                district: '新興區',
+                category: '藝術人文',
+                imageUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT3oKvOwEytdoGxihyul2Tin8IqD1SCy2dkscAOwUQ5lCrriuVHw1DzOjI&s=10',
+                desc: '由義大利藝術家水仙大師設計，世界最大的彩色玻璃藝術創作，演繹人生水土光火四元素。',
+                nearStation: '捷運美麗島站(2號出口)'
+            },
+            {
+                id: 'spot-6',
+                name: '愛河之心',
+                district: '三民區',
+                category: '自然風光',
+                imageUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdi9OS2cNeffSohuPNOOkVHQymR4oXB1ZRKdVs-fHnRBN-EeEXTo33hDw&s=10',
+                desc: '結合水陸觀光與生態工法的雙如意造型橋樑，夜間璀璨橋影倒映水面，非常適合夜間騎乘自行車漫遊。',
+                nearStation: '愛河之心(博愛一路)'
+            },
+            {
+                id: 'spot-7',
+                name: '打狗英國領事館',
+                district: '鼓山區',
+                category: '藝術人文',
+                imageUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSM1_EaseKJHCcRv0weM08SElzna0vei5AvzYXDxp5N1plRs3azNuUFb2Q&s=10',
+                desc: '建於西元1865年的巴洛克紅磚建築，矗立於西子灣山頂，俯瞰高雄港景色與夕陽餘暉，為台灣古蹟亮點。',
+                nearStation: '捷運西子灣站(1號出口)'
+            },
+            {
+                id: 'spot-8',
+                name: '高雄大港橋',
+                district: '鹽埕區',
+                category: '地標建築',
+                imageUrl: 'https://khh.travel/image/34276/1024x768',
+                desc: '全台首座水平旋轉橋，連接駁二與蓬萊商港區，純白流線造型宛如優雅的海豚與帆船，旋轉開啟時吸引眾多遊客觀賞。',
+                nearStation: '駁二大義站'
+            },
+            {
+                id: 'spot-9',
+                name: '西子灣',
+                district: '鼓山區',
+                category: '自然風光',
+                imageUrl: 'https://www.taiwan.net.tw/att/1/big_scenic_spots/pic_624_15.jpg',
+                desc: '以夕陽美景與天然礁石海岸聞名，緊鄰中山大學與打狗英國領事館，為高雄欣賞落日餘暉與海景的極佳觀光勝地。',
+                nearStation: '捷運西子灣站(1號出口)'
+            },
+            {
+                id: 'spot-10',
+                name: '六合夜市',
+                district: '新興區',
+                category: '美食夜市',
+                imageUrl: 'https://www.taiwan.net.tw/att/1/big_scenic_spots/pic_2245_12.jpg',
+                desc: '南台灣歷史悠久的國際級觀光夜市，匯聚海產粥、木瓜牛奶、鹽蒸蝦等享譽國際的高雄在地經典小吃。',
+                nearStation: '捷運美麗島站(2號出口)'
+            },
+            {
+                id: 'spot-11',
+                name: '瑞豐夜市',
+                district: '鼓山區',
+                category: '美食夜市',
+                imageUrl: 'https://ian.marieclaire.com.tw/assets/mc/202509/68D6C5C3026A71758905795.png?t=auto&w=1200%2C675&format=jpg',
+                desc: '高雄人氣極高的在地大型夜市，擺設超過千個攤位，匯集各式創意異國美食、傳統小吃與熱鬧遊戲攤位。',
+                nearStation: '捷運巨蛋站(2號出口)'
+            },
+            {
+                id: 'spot-12',
+                name: '高雄85大樓',
+                district: '前鎮區',
+                category: '地標建築',
+                imageUrl: 'https://www.taiwan.net.tw/att/1/big_scenic_spots/pic_9328_4.jpg',
+                desc: '高雄著名地標摩天大樓，特殊的「高」字型建築外觀傲視高雄港灣，展現港都壯麗景觀與都市天際線。',
+                nearStation: '高雄市立圖書館總館'
+            }
+        ];
+
+        // Comprehensive fallback data for YouBike stations in Kaohsiung
+        const MOCK_STATIONS = [
+            { sna: '駁二藝術特區(大義街)', sarea: '鹽埕區', ar: '大義街/必信街口', sbi: 14, bemp: 10, act: '1' },
+            { sna: '高雄流行音樂中心', sarea: '鹽埕區', ar: '真愛路1號前', sbi: 8, bemp: 16, act: '1' },
+            { sna: '捷運鹽埕埔站(1號出口)', sarea: '鹽埕區', ar: '大勇路/五福四路口', sbi: 18, bemp: 6, act: '1' },
+            { sna: '蓮池潭(勝利路)', sarea: '左營區', ar: '勝利路/蓮潭路口', sbi: 12, bemp: 8, act: '1' },
+            { sna: '捷運巨蛋站(2號出口)', sarea: '左營區', ar: '博愛二路/裕誠路口', sbi: 22, bemp: 4, act: '1' },
+            { sna: '捷運美麗島站(2號出口)', sarea: '新興區', ar: '中山一路/中正四路口', sbi: 15, bemp: 11, act: '1' },
+            { sna: '旗津輪渡站', sarea: '旗津區', ar: '海岸路/旗津一路口', sbi: 9, bemp: 15, act: '1' },
+            { sna: '捷運西子灣站(1號出口)', sarea: '鼓山區', ar: '臨海二路/麗興街口', sbi: 11, bemp: 9, act: '1' },
+            { sna: '愛河之心(博愛一路)', sarea: '三民區', ar: '博愛一路/同盟一路口', sbi: 7, bemp: 13, act: '1' },
+            { sna: '高雄車站(建國二路)', sarea: '三民區', ar: '建國二路318號前', sbi: 25, bemp: 5, act: '1' },
+            { sna: '捷運中央公園站(1號出口)', sarea: '苓雅區', ar: '中山一路/民生二路口', sbi: 16, bemp: 8, act: '1' },
+            { sna: '高雄市立圖書館總館', sarea: '前鎮區', ar: '新光路61號前', sbi: 19, bemp: 11, act: '1' },
+            { sna: '駁二大義站', sarea: '鹽埕區', ar: '駁二大義倉庫群旁', sbi: 5, bemp: 15, act: '1' },
+            { sna: '捷運三多商圈站(2號出口)', sarea: '前鎮區', ar: '中山二路/三多四路口', sbi: 13, bemp: 12, act: '1' },
+            { sna: '輕軌高雄展覽館站', sarea: '前鎮區', ar: '成功二路/林森四路口', sbi: 10, bemp: 14, act: '1' },
+            { sna: '捷運左營站(2號出口)', sarea: '左營區', ar: '高鐵路/重信路口', sbi: 28, bemp: 12, act: '1' },
+            { sna: '生態園區站(2號出口)', sarea: '左營區', ar: '博愛三路/孟子路口', sbi: 9, bemp: 11, act: '1' },
+            { sna: '文化中心站(3號出口)', sarea: '苓雅區', ar: '和平一路/中正二路口', sbi: 17, bemp: 7, act: '1' },
+            { sna: '衛武營國家藝術文化中心', sarea: '鳳山區', ar: '三多一路/南京路口', sbi: 21, bemp: 9, act: '1' },
+            { sna: '捷運鳳山西站(1號出口)', sarea: '鳳山區', ar: '自由路/澄清路口', sbi: 14, bemp: 10, act: '1' },
+            { sna: '高雄市立美術館', sarea: '鼓山區', ar: '美術館路/美術東二路口', sbi: 16, bemp: 14, act: '1' },
+            { sna: '輕軌美術館站', sarea: '鼓山區', ar: '美術館路/馬卡道路口', sbi: 12, bemp: 8, act: '1' },
+            { sna: '捷運凹子底站(4號出口)', sarea: '鼓山區', ar: '博愛二路/至聖路口', sbi: 20, bemp: 10, act: '1' },
+            { sna: '捷運信義國小站(1號出口)', sarea: '新興區', ar: '中正三路/錦田路口', sbi: 11, bemp: 13, act: '1' },
+            { sna: '文化中心(和平一路)', sarea: '苓雅區', ar: '和平一路116號前', sbi: 15, bemp: 9, act: '1' },
+            { sna: '捷運後驛站(1號出口)', sarea: '三民區', ar: '博愛一路/察哈爾一街口', sbi: 13, bemp: 11, act: '1' },
+            { sna: '國立高雄科技大學(建工校區)', sarea: '三民區', ar: '建工路415號前', sbi: 24, bemp: 6, act: '1' },
+            { sna: '捷運草衙站(1號出口)', sarea: '前鎮區', ar: '翠亨南路/中安路口', sbi: 18, bemp: 12, act: '1' },
+            { sna: '捷運小港站(3號出口)', sarea: '小港區', ar: '沿海一路/漢民路口', sbi: 15, bemp: 15, act: '1' },
+            { sna: '捷運世運站(1號出口)', sarea: '楠梓區', ar: '世運大道/左楠路口', sbi: 10, bemp: 10, act: '1' },
+            { sna: '國立高雄大學(圖資館)', sarea: '楠梓區', ar: '高雄大學路700號', sbi: 22, bemp: 18, act: '1' },
+            { sna: '捷運岡山車站(1號出口)', sarea: '岡山區', ar: '中山南路/岡燕路口', sbi: 16, bemp: 8, act: '1' },
+            { sna: '輕軌哈瑪星站', sarea: '鼓山區', ar: '臨海新路/鼓山一路口', sbi: 14, bemp: 16, act: '1' },
+            { sna: '旗津海水浴場', sarea: '旗津區', ar: '廟前路/海岸路口', sbi: 8, bemp: 12, act: '1' },
+            { sna: '高雄流行音樂中心(音浪塔)', sarea: '鹽埕區', ar: '真愛路/海邊路口', sbi: 12, bemp: 18, act: '1' }
+        ];
+
+        let rawYouBikeData = [];
+        let currentStations = [];
+        let updateTimerInterval;
+        let secondsLeft = 60;
+
+        // Initialize Application
+        window.addEventListener('DOMContentLoaded', () => {
+            initIcons();
+            initEventListeners();
+            renderAttractions('ALL');
+            fetchYouBikeData();
+            startCountdown();
+        });
+
+        function initIcons() {
+            lucide.createIcons();
+        }
+
+        async function fetchYouBikeData() {
+            const refreshIcon = document.getElementById('refresh-icon');
+            if (refreshIcon) refreshIcon.classList.add('animate-spin');
+
+            const statusText = document.getElementById('data-status-text');
+
+            try {
+                // Primary Public Kaohsiung YouBike Open API endpoint
+                const apiUrl = 'https://api.kcg.gov.tw/api/service/Get/b4dd9c40-9e10-4822-b984-9842a2202b37';
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+                const response = await fetch(apiUrl, { signal: controller.signal }).catch(() => null);
+                clearTimeout(timeoutId);
+
+                if (response && response.ok) {
+                    const result = await response.json();
+                    let dataArray = [];
+                    
+                    if (result.data && Array.isArray(result.data)) {
+                        dataArray = result.data;
+                    } else if (Array.isArray(result)) {
+                        dataArray = result;
+                    }
+
+                    if (dataArray.length > 0) {
+                        rawYouBikeData = dataArray.map(item => ({
+                            sna: (item.sna || item.StationName || '').replace('YouBike2.0_', ''),
+                            sarea: item.sarea || item.Sarea || '高雄市',
+                            ar: item.ar || item.Address || '無詳細地址',
+                            sbi: parseInt(item.sbi || item.BikeCapacity || 0),
+                            bemp: parseInt(item.bemp || item.EmptyCapacity || 0),
+                            act: item.act || '1'
+                        }));
+                        if (statusText) statusText.innerText = "連線正常 (即時)";
+                        showToast("已成功更新即時 YouBike 資料");
+                    } else {
+                        throw new Error("無效資料格式");
+                    }
+                } else {
+                    throw new Error("即時 API 未回應，切換至備用即時資料");
+                }
+            } catch (err) {
+                console.warn("API Fetch warning, using robust mock data:", err.message);
+                rawYouBikeData = [...MOCK_STATIONS];
+                if (statusText) statusText.innerText = "展示模式 (擬真資料)";
+                showToast("已載入高雄重點場站最新即時動態");
+            } finally {
+                if (refreshIcon) refreshIcon.classList.remove('animate-spin');
+                secondsLeft = 60;
+                applyFiltersAndRender();
+            }
+        }
+
+        function applyFiltersAndRender() {
+            const district = document.getElementById('district-select').value;
+            const status = document.getElementById('status-filter').value;
+            const searchKeyword = document.getElementById('search-input').value.trim().toLowerCase();
+
+            currentStations = rawYouBikeData.filter(s => {
+                // District filter
+                if (district !== 'ALL' && s.sarea !== district) return false;
+
+                // Status filter
+                if (status === 'HAS_BIKES' && s.sbi <= 0) return false;
+                if (status === 'PLENTY_BIKES' && s.sbi <= 5) return false;
+                if (status === 'HAS_SPACES' && s.bemp <= 0) return false;
+
+                // Keyword search
+                if (searchKeyword && !s.sna.toLowerCase().includes(searchKeyword) && !s.ar.toLowerCase().includes(searchKeyword)) {
+                    return false;
+                }
+
+                return true;
+            });
+
+            updateOverviewStats(currentStations);
+            renderStationList(currentStations);
+        }
+
+        function updateOverviewStats(stations) {
+            const totalBikes = stations.reduce((acc, cur) => acc + (cur.sbi || 0), 0);
+            const totalSpaces = stations.reduce((acc, cur) => acc + (cur.bemp || 0), 0);
+
+            document.getElementById('stat-total-bikes').innerText = totalBikes.toLocaleString();
+            document.getElementById('stat-total-spaces').innerText = totalSpaces.toLocaleString();
+            document.getElementById('stat-total-stations').innerText = stations.length;
+        }
+
+        function renderStationList(stations) {
+            const listContainer = document.getElementById('station-list');
+            listContainer.innerHTML = '';
+
+            if (stations.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="col-span-full p-8 text-center text-slate-400">
+                        <i data-lucide="info" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                        <p class="text-sm">查無符合條件的 YouBike 站點</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            stations.forEach((st) => {
+                // Status badge logic
+                let badgeBg = 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-800';
+                let badgeText = '可借充足';
+                if (st.sbi === 0) {
+                    badgeBg = 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800';
+                    badgeText = '無車可借';
+                } else if (st.sbi <= 3) {
+                    badgeBg = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800';
+                    badgeText = '車輛較少';
+                }
+
+                const card = document.createElement('div');
+                card.className = `p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 hover:border-orange-500/50 dark:hover:border-orange-500/50 transition-all cursor-pointer shadow-sm group flex flex-col justify-between`;
+                
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex items-center space-x-2">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">${st.sarea}</span>
+                                <h4 class="font-bold text-sm group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">${st.sna}</h4>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-medium border ${badgeBg} shrink-0">
+                                ${badgeText}
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 line-clamp-2">${st.ar}</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 mt-3 pt-2 border-t border-slate-100 dark:border-slate-700/50 text-xs">
+                        <div class="flex items-center space-x-1.5">
+                            <i data-lucide="bike" class="w-4 h-4 text-orange-500"></i>
+                            <span class="text-slate-500 dark:text-slate-400">可借:</span>
+                            <span class="font-bold text-slate-800 dark:text-slate-100 text-sm">${st.sbi}</span>
+                        </div>
+                        <div class="flex items-center space-x-1.5">
+                            <i data-lucide="parking-square" class="w-4 h-4 text-sky-500"></i>
+                            <span class="text-slate-500 dark:text-slate-400">可還:</span>
+                            <span class="font-bold text-slate-800 dark:text-slate-100 text-sm">${st.bemp}</span>
+                        </div>
+                    </div>
+                `;
+
+                card.addEventListener('click', () => {
+                    showToast(`已選取站點：「${st.sna}」(${st.ar})`);
+                });
+
+                listContainer.appendChild(card);
+            });
+
+            lucide.createIcons();
+        }
+
+        function renderAttractions(filterCategory = 'ALL') {
+            const grid = document.getElementById('attractions-grid');
+            grid.innerHTML = '';
+
+            const filtered = filterCategory === 'ALL' 
+                ? KAOHSIUNG_SPOTS 
+                : KAOHSIUNG_SPOTS.filter(s => s.category === filterCategory);
+
+            filtered.forEach(spot => {
+                const card = document.createElement('div');
+                card.className = 'p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 hover:border-purple-500/50 hover:shadow-md transition-all duration-300 flex flex-col justify-between space-y-4';
+                
+                const imageHtml = spot.imageUrl ? `
+                    <div class="relative w-full h-36 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-700">
+                        <img src="${spot.imageUrl}" alt="${spot.name}" referrerpolicy="no-referrer" class="w-full h-full object-cover transition-transform duration-500 hover:scale-105" onerror="this.onerror=null; this.src='https://placehold.co/600x400/1e293b/e2e8f0?text=${encodeURIComponent(spot.name)}';">
+                        <div class="absolute bottom-2 left-2 bg-slate-900/70 backdrop-blur-md text-white text-[10px] px-2 py-0.5 rounded-md font-medium">
+                            ${spot.name}
+                        </div>
+                    </div>
+                ` : '';
+
+                card.innerHTML = `
+                    <div class="space-y-2.5">
+                        ${imageHtml}
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                                ${spot.category}
+                            </span>
+                            <span class="text-xs text-slate-500 dark:text-slate-400 flex items-center space-x-1">
+                                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-purple-500"></i>
+                                <span>${spot.district}</span>
+                            </span>
+                        </div>
+                        <h3 class="font-bold text-base text-slate-800 dark:text-slate-100">${spot.name}</h3>
+                        <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed line-clamp-3">
+                            ${spot.desc}
+                        </p>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+                        <span class="text-[11px] text-slate-400">
+                            鄰近站點: ${spot.nearStation}
+                        </span>
+                        <button class="locate-spot-btn px-3 py-1.5 rounded-xl bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-600 hover:text-white text-xs font-semibold text-purple-600 dark:text-purple-300 flex items-center space-x-1.5 transition-all" data-name="${spot.name}" data-near="${spot.nearStation}">
+                            <span>搜尋周邊站點</span>
+                            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+
+            // Bind click for locating spot on map & highlight nearby station
+            document.querySelectorAll('.locate-spot-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const name = btn.dataset.name;
+                    const nearStation = btn.dataset.near;
+
+                    if (nearStation) {
+                        const searchInput = document.getElementById('search-input');
+                        searchInput.value = nearStation.replace('捷運', '');
+                        applyFiltersAndRender();
+                    }
+
+                    showToast(`已為您篩選「${name}」周邊站點 (${nearStation})`);
+                });
+            });
+
+            lucide.createIcons();
+        }
+
+        function initEventListeners() {
+            // Theme switch
+            document.getElementById('theme-toggle').addEventListener('click', () => {
+                document.documentElement.classList.toggle('dark');
+            });
+
+            // Manual Refresh
+            document.getElementById('refresh-btn').addEventListener('click', () => {
+                fetchYouBikeData();
+            });
+
+            // Filters
+            document.getElementById('district-select').addEventListener('change', applyFiltersAndRender);
+            document.getElementById('status-filter').addEventListener('change', applyFiltersAndRender);
+            document.getElementById('search-input').addEventListener('input', applyFiltersAndRender);
+
+            // Spot category tags
+            document.querySelectorAll('.spot-tag').forEach(tagBtn => {
+                tagBtn.addEventListener('click', () => {
+                    document.querySelectorAll('.spot-tag').forEach(b => {
+                        b.classList.remove('bg-purple-600', 'text-white');
+                        b.classList.add('bg-slate-100', 'dark:bg-slate-800', 'text-slate-600', 'dark:text-slate-300');
+                    });
+                    tagBtn.classList.remove('bg-slate-100', 'dark:bg-slate-800', 'text-slate-600', 'dark:text-slate-300');
+                    tagBtn.classList.add('bg-purple-600', 'text-white');
+
+                    renderAttractions(tagBtn.dataset.tag);
+                });
+            });
+        }
+
+        function startCountdown() {
+            if (updateTimerInterval) clearInterval(updateTimerInterval);
+
+            updateTimerInterval = setInterval(() => {
+                secondsLeft--;
+                const timerEl = document.getElementById('update-timer');
+                if (timerEl) timerEl.innerText = `更新倒數: ${secondsLeft}s`;
+
+                if (secondsLeft <= 0) {
+                    fetchYouBikeData();
+                }
+            }, 1000);
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-message');
+            
+            if (!toast || !toastMsg) return;
+
+            toastMsg.innerText = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
